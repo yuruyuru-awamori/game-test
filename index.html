@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b5860">
 <meta name="description" content="落として、ころがして、合体！泡盛文化の10段階を発見する無料ブラウザーゲーム。ログイン不要。">
-<title>泡盛ころころ合体パズル v0.2.4 | ゆるゆる泡盛 ゲーム ラボ</title>
+<title>泡盛ころころ合体パズル v0.2.5 | ゆるゆる泡盛 ゲーム ラボ</title>
 <style>
 :root{color-scheme:light;--deep:#0b5860;--action:#116b73;--action-shadow:#a5d5ce;--ink:#173f47;--muted:#607d81;--bg:#eff8f4;--border:#d4e8e1;--paper:#fffefb}
 *{box-sizing:border-box}
@@ -38,7 +38,7 @@ button:disabled{opacity:.48;cursor:not-allowed}
 .mini-piece{position:relative;width:32px;height:32px;border-radius:50%;border:2px solid #ffffff;outline:1px solid #648f84;display:grid;place-items:center;box-shadow:inset 0 -2px #0002;overflow:visible;background:#fff;flex:none}.mini-piece canvas{width:28px;height:28px;display:block}.mini-badge{position:absolute;left:1px;top:1px;min-width:12px;height:12px;padding:0 2px;border-radius:999px;background:#fffdf7;border:1px solid #8db3a8;color:#31515b;font-size:8px;line-height:10px;font-weight:950;text-align:center;box-shadow:0 1px 2px #00000014}
 .next-name{font-size:14px;font-weight:900;white-space:nowrap}
 .typhoon-info{display:none;margin:0 0 8px;padding:7px 9px;border:2px solid #e9bd73;border-radius:13px;background:#fff2ce;color:#754915;text-align:center;font-size:12px;font-weight:900;line-height:1.4}
-.typhoon-info.show{display:block}.typhoon-info .storm-arrow{font-size:21px;vertical-align:middle;margin:0 7px}.typhoon-info.preview{border-color:#b6d8d5;background:#ecf8f6;color:#345e64}
+.typhoon-info.show{display:block}.typhoon-info .storm-arrow{font-size:21px;vertical-align:middle;margin:0 7px}.typhoon-info.preview{border-color:#e9bd73;background:#fff2ce;color:#754915}
 .board-shell{background:#fffefb;border:2px solid #c7e1d6;border-radius:20px;padding:7px;box-shadow:0 12px 28px #1b685115;position:relative}
 .evo-guide{background:#f8fcf9;border:1px solid #d8ebe1;border-radius:14px;padding:6px 6px 7px;margin:0 0 8px;box-shadow:0 2px 6px #124e4710}
 .evo-caption{font-size:12px;font-weight:900;color:#4d706c;text-align:center;line-height:1.15;margin-bottom:5px;letter-spacing:.03em}
@@ -146,7 +146,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-
 <script>
 'use strict';
 (() => {
-const APP_VERSION='0.2.4', APP_ID='yuruyuru-awamori-merge', FORMAT=1, STORE='awamori-merge-save-v1';
+const APP_VERSION='0.2.5', APP_ID='yuruyuru-awamori-merge', FORMAT=1, STORE='awamori-merge-save-v1';
 const W=360,H=520,LINE=86,FLOOR=H-4, DT=1000/60;
 const names=['タイ米','黒麹','もろみ','蒸留器','泡盛瓶','ちぶぐゎー','からから','貯蔵甕','古酒','仕次ぎ'];
 const tinyNames=['米','麹','もろみ','蒸留','瓶','ちぶ','から','甕','古酒','仕次'];
