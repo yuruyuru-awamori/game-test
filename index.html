@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b5860">
 <meta name="description" content="落として、ころがして、合体！泡盛文化の10段階を発見する無料ブラウザーゲーム。ログイン不要。">
-<title>泡盛ころころ合体パズル v0.2.0 | ゆるゆる泡盛 ゲーム ラボ</title>
+<title>泡盛ころころ合体パズル v0.2.1 | ゆるゆる泡盛 ゲーム ラボ</title>
 <style>
 :root{color-scheme:light;--deep:#0b5860;--action:#116b73;--action-shadow:#a5d5ce;--ink:#173f47;--muted:#607d81;--bg:#eff8f4;--border:#d4e8e1;--paper:#fffefb}
 *{box-sizing:border-box}
@@ -37,6 +37,8 @@ button:disabled{opacity:.48;cursor:not-allowed}
 .next-content{display:flex;justify-content:center;align-items:center;gap:7px;height:38px}
 .mini-piece{position:relative;width:32px;height:32px;border-radius:50%;border:2px solid #ffffff;outline:1px solid #648f84;display:grid;place-items:center;box-shadow:inset 0 -2px #0002;overflow:visible;background:#fff;flex:none}.mini-piece canvas{width:28px;height:28px;display:block}.mini-badge{position:absolute;left:1px;top:1px;min-width:12px;height:12px;padding:0 2px;border-radius:999px;background:#fffdf7;border:1px solid #8db3a8;color:#31515b;font-size:8px;line-height:10px;font-weight:950;text-align:center;box-shadow:0 1px 2px #00000014}
 .next-name{font-size:14px;font-weight:900;white-space:nowrap}
+.typhoon-info{display:none;margin:0 0 8px;padding:7px 9px;border:2px solid #e9bd73;border-radius:13px;background:#fff2ce;color:#754915;text-align:center;font-size:12px;font-weight:900;line-height:1.4}
+.typhoon-info.show{display:block}.typhoon-info .storm-arrow{font-size:21px;vertical-align:middle;margin:0 7px}.typhoon-info.preview{border-color:#b6d8d5;background:#ecf8f6;color:#345e64}
 .board-shell{background:#fffefb;border:2px solid #c7e1d6;border-radius:20px;padding:7px;box-shadow:0 12px 28px #1b685115;position:relative}
 .evo-guide{background:#f8fcf9;border:1px solid #d8ebe1;border-radius:14px;padding:6px 6px 7px;margin:0 0 8px;box-shadow:0 2px 6px #124e4710}
 .evo-caption{font-size:12px;font-weight:900;color:#4d706c;text-align:center;line-height:1.15;margin-bottom:5px;letter-spacing:.03em}
@@ -117,6 +119,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-
     <div class="stat"><div class="stat-label">自己ベスト</div><div class="stat-value" id="best">0</div></div>
     <div class="stat"><div class="stat-label">次のアイテム</div><div class="next-content"><span class="mini-piece" id="nextIcon" aria-label="次のアイテム"></span><span class="next-name" id="nextName">タイ米</span></div></div>
   </section>
+  <div class="typhoon-info" id="typhoonInfo" role="status" aria-live="polite"></div>
   <section class="evo-guide" aria-label="進化順ガイド">
     <div class="evo-caption">進化順　1 → 2 → 3 → … → 10</div>
     <div class="evo-scroll"><div class="evo-line" id="evoLine"></div></div>
@@ -142,7 +145,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;user-select:none;-
 <script>
 'use strict';
 (() => {
-const APP_VERSION='0.2.0', APP_ID='yuruyuru-awamori-merge', FORMAT=1, STORE='awamori-merge-save-v1';
+const APP_VERSION='0.2.1', APP_ID='yuruyuru-awamori-merge', FORMAT=1, STORE='awamori-merge-save-v1';
 const W=360,H=520,LINE=86,FLOOR=H-4, DT=1000/60;
 const names=['タイ米','黒麹','もろみ','蒸留器','泡盛瓶','ちぶぐゎー','からから','貯蔵甕','古酒','仕次ぎ'];
 const tinyNames=['米','麹','もろみ','蒸留','瓶','ちぶ','から','甕','古酒','仕次'];
@@ -189,16 +192,25 @@ let mode='normal',dailyDate='',rngState=0,skillCharges=0,skillUseCount=0,turnCou
 function seedFor(date){let x=2166136261;for(const ch of 'awamori-merge-v0.2.0:'+date){x=Math.imul(x^ch.charCodeAt(0),16777619)>>>0}return x||1}
 function seededRandom(){let x=rngState>>>0;x^=x<<13;x^=x>>>17;x^=x<<5;rngState=x>>>0;return (rngState>>>0)/4294967296}
 const randLv=()=>{const r=mode==='daily'?seededRandom():Math.random();if(mode==='advanced')return r<.35?1:r<.7?2:3;return r<.5?1:r<.85?2:3};
-const badgeDefs=[['merge3','3コンボ達成'],['reach7','からから発見'],['reach10','仕次ぎ発見'],['score10000','10,000点達成'],['plays10','10回プレイ'],['combo5','5コンボ達成'],['score30000','30,000点達成'],['special3','仕次ぎスペシャル3回'],['skill3','くろまい君を累計3回使用']];
-function freshExtra(){return {modeRecords:{normal:{best:0,plays:0},daily:{best:0,plays:0},advanced:{best:0,plays:0}},dailyRecords:{},dailyAwards:[],advancedAwards:[],skillTotal:0,normalRepeatMedals:0,earnedTitles:[]}}
+const badgeDefs=[['merge3','3コンボ達成'],['reach7','からから発見'],['reach10','仕次ぎ発見'],['score10000','10,000点達成'],['plays10','10回プレイ'],['combo5','5コンボ達成'],['score30000','30,000点達成'],['special3','仕次ぎスペシャル3回'],['skill3','くろまい君を累計3回使用'],['storm1','台風を1回乗り切る']];
+function freshExtra(){return {modeRecords:{normal:{best:0,plays:0},daily:{best:0,plays:0},advanced:{best:0,plays:0}},dailyRecords:{},dailyAwards:[],advancedAwards:[],skillTotal:0,normalRepeatMedals:0,earnedTitles:[],stormsSurvived:0}}
 function ensureExtra(){const e=freshExtra();for(const k in e)if(stats[k]===undefined)stats[k]=e[k];for(const k in e.modeRecords){if(!stats.modeRecords[k]||typeof stats.modeRecords[k]!=='object')stats.modeRecords[k]=e.modeRecords[k]}return stats}
 function modeBest(){ensureExtra();return mode==='normal'?stats.bestScore:stats.modeRecords[mode].best}
-function unlockedTitles(){return [['泡盛チャレンジャー',true],['泡盛見習い',stats.bestScore>=1000],['泡盛名人',stats.bestScore>=5000],['古酒の達人',stats.bestScore>=15000],['泡盛合体マスター',stats.bestScore>=40000],['連鎖職人',stats.maxCombo>=5],['日替わり探検家',stats.dailyAwards.length>=3],['上級パズル職人',stats.modeRecords.advanced.best>=5000]].filter(x=>x[1]).map(x=>x[0])}
+function unlockedTitles(){return [['泡盛チャレンジャー',true],['泡盛見習い',stats.bestScore>=1000],['泡盛名人',stats.bestScore>=5000],['古酒の達人',stats.bestScore>=15000],['泡盛合体マスター',stats.bestScore>=40000],['連鎖職人',stats.maxCombo>=5],['日替わり探検家',stats.dailyAwards.length>=3],['上級パズル職人',stats.modeRecords.advanced.best>=5000],['台風を乗り越えた泡盛職人',stats.stormsSurvived>=3]].filter(x=>x[1]).map(x=>x[0])}
 function recordMedal(id){ensureExtra();if(mode==='normal'){if(stats.achievements.includes(id))return false;stats.achievements.push(id);stats.medalAwards=stats.achievements.length+stats.normalRepeatMedals}else if(mode==='advanced'){if(stats.advancedAwards.includes(id))return false;stats.advancedAwards.push(id)}return true}
 function dailyProgress(){ensureExtra();if(mode!=='daily')return;const prev=stats.dailyRecords[dailyDate]||{best:0,plays:0,cleared:false};prev.best=Math.max(prev.best,score);stats.dailyRecords[dailyDate]=prev}
 
 const blankStats=()=>({...freshExtra(),nickname:'ゲスト',plays:0,bestScore:0,lastScore:0,maxCombo:0,maxChain:0,finalPairs:0,discovered:[],medalAwards:0,achievements:[],dailyMedals:0});
 let stats=blankStats(), balls=[],nextId=1, current=randLv(), next=randLv(),score=0,merges=0,usedSkill=false,combo=0,turnChain=0,turnAge=0,settleMs=0,lastDropId=0,warnMs=0,game='READY',resumeState='READY',paused=false,aimX=W/2,particles=[],lastSaved='',pointerActive=false,toastUntil=0,toastHandle=0;
+// 台風イベントは落下中の新規アイテムにだけ作用し、既存の玉には影響しない。
+// turnCount と日付から算出し、日替わりチャレンジでも再現可能にする。
+let storm={active:0,dir:0,nextAt:24,serial:0,dropId:0,applied:0};
+function stormHash(n){let h=2166136261>>>0;for(const ch of (mode==='daily'?dailyDate:'normal-'+playId)+'/'+n){h=Math.imul(h^ch.charCodeAt(0),16777619)>>>0}return h}
+function stormNextInterval(n,first=false){return (first?20:15)+(stormHash(n)%(first?11:11))}
+function stormWindDir(n){return stormHash(n+'direction')%2===0?1:-1}
+function stormReset(){storm={active:0,dir:0,nextAt:stormNextInterval(0,true),serial:0,dropId:0,applied:0}}
+function stormBanner(){const el=$('#typhoonInfo');if(!el)return;if(storm.active>0){const arrow=storm.dir===1?'→':'←';el.className='typhoon-info show';el.innerHTML='台風が発生しました！ '+(storm.dir===1?'左':'右')+'から風が吹いています！ <span class="storm-arrow">'+arrow+'</span> 残り'+storm.active+'回';}else if(storm.nextAt-turnCount<=2&&storm.nextAt>turnCount){el.className='typhoon-info show preview';el.textContent='沖縄近海で台風発生！ あと'+(storm.nextAt-turnCount)+'回の落下で接近';}else{el.className='typhoon-info';el.textContent=''}}
+function stormUpdateReady(){if(storm.active===0&&turnCount>=storm.nextAt){storm.serial++;storm.active=3;storm.dir=stormWindDir(storm.serial);storm.applied=0;storm.dropId=0;toast('台風が発生しました！ '+(storm.dir===1?'左':'右')+'から強風！',2300);tone(240,.17)}stormBanner()}
 let soundOn=true,ac=null,modalHold=false;let pauseStartedFrom='READY';let loopTime=0,accum=0,everPlayed=false;
 function stateStatus(){if(paused)return '一時停止中';if(game==='GAME_OVER')return 'ゲーム終了';if(game==='WARNING')return '上限ラインを超過！ 3秒以内に回復しよう';if(game==='DROPPING')return '落下・合体中…';return 'タップまたはドラッグしてアイテムを落とそう';}
 function setStatus(t){$('#status').textContent=t||stateStatus()}
@@ -233,25 +245,25 @@ function validateData(p){try{if(!p||p.app!==APP_ID||p.formatVersion!==FORMAT||!p
 
  return {stats:{...blankStats(),...s},session:q,settings:{soundOn:sound}};
  }catch(_){return null}}
-function sessionSnapshot(){return {score,merges,current,next,usedSkill,nextId,mode,dailyDate,rngState,skillCharges,skillUseCount,turnCount,playId,warnMs:Math.round(warnMs),game:game==='GAME_OVER'?'GAME_OVER':(warnMs>0?'WARNING':'READY'),balls:balls.map(b=>({id:b.id,lv:b.lv,x:Math.round(b.x*100)/100,y:Math.round(b.y*100)/100}))}}
+function sessionSnapshot(){return {score,merges,current,next,usedSkill,nextId,mode,dailyDate,rngState,skillCharges,skillUseCount,turnCount,playId,warnMs:Math.round(warnMs),storm:{...storm,dropId:0,applied:0},game:game==='GAME_OVER'?'GAME_OVER':(warnMs>0?'WARNING':'READY'),balls:balls.map(b=>({id:b.id,lv:b.lv,x:Math.round(b.x*100)/100,y:Math.round(b.y*100)/100}))}}
 function payload(){return {app:APP_ID,appVersion:APP_VERSION,formatVersion:FORMAT,exportedAt:new Date().toISOString(),stats:{...stats},session:sessionSnapshot(),settings:{soundOn}}}
 function save(){try{
  // 落下・合体の途中では盤面をセーブしない。最後の安定状態を維持する。
  if(game==='DROPPING')return false;
  let str=JSON.stringify(payload());localStorage.setItem(STORE,str);lastSaved=str;return true
  }catch(e){return false}}
-function loadSession(q){mode=q.mode||'normal';dailyDate=q.dailyDate||'';rngState=q.rngState||0;skillCharges=q.skillCharges||0;skillUseCount=q.skillUseCount||0;turnCount=q.turnCount||0;playId=q.playId||0;score=q.score;merges=q.merges;current=q.current;next=q.next;usedSkill=q.usedSkill;nextId=q.nextId;warnMs=q.warnMs||0;game=q.game;paused=false;balls=q.balls.map(b=>({...b,vx:0,vy:0,chain:0,age:1000}));combo=0;turnChain=0;turnAge=0;settleMs=0;aimX=W/2}
-function updateUI(){const best=Math.max(modeBest(),score);$('#score').textContent=fmt(score);$('#best').textContent=fmt(best);renderMiniOrb($('#nextIcon'),next);$('#nextName').textContent=names[next-1];$('#playName').textContent='プレイヤー：'+stats.nickname+' ／ '+MODES[mode]+(mode==='daily'?' '+dailyDate:'');$('#recordHint').textContent='最大コンボ：'+fmt(stats.maxCombo);const btn=$('#skillButton');let available=skillCharges>0&&['READY','WARNING'].includes(game)&&!paused;btn.disabled=!available;$('#skillInfo').textContent=skillCharges>0?(available?'残り '+skillCharges+'回':'落下終了後に使用可能'):'あと'+Math.max(0,5-(merges%5))+'合体で解放';$('#pauseButton').textContent=paused?'▶ 再開':'Ⅱ 一時停止';$('#pauseButton').disabled=game==='GAME_OVER'}
+function loadSession(q){mode=q.mode||'normal';dailyDate=q.dailyDate||'';rngState=q.rngState||0;skillCharges=q.skillCharges||0;skillUseCount=q.skillUseCount||0;turnCount=q.turnCount||0;playId=q.playId||0;score=q.score;merges=q.merges;current=q.current;next=q.next;usedSkill=q.usedSkill;nextId=q.nextId;warnMs=q.warnMs||0;game=q.game;paused=false;balls=q.balls.map(b=>({...b,vx:0,vy:0,chain:0,age:1000}));combo=0;turnChain=0;turnAge=0;settleMs=0;aimX=W/2;stormReset();if(q.storm&&Number.isInteger(q.storm.nextAt)&&q.storm.nextAt>=0&&q.storm.nextAt<=1e7&&Number.isInteger(q.storm.active)&&q.storm.active>=0&&q.storm.active<=3&&[-1,0,1].includes(q.storm.dir)){storm={active:q.storm.active,dir:q.storm.dir,nextAt:q.storm.nextAt,serial:q.storm.serial||0,dropId:0,applied:0}}stormBanner()}
+function updateUI(){const best=Math.max(modeBest(),score);$('#score').textContent=fmt(score);$('#best').textContent=fmt(best);renderMiniOrb($('#nextIcon'),next);$('#nextName').textContent=names[next-1];$('#playName').textContent='プレイヤー：'+stats.nickname+' ／ '+MODES[mode]+(mode==='daily'?' '+dailyDate:'');$('#recordHint').textContent='最大コンボ：'+fmt(stats.maxCombo);const btn=$('#skillButton');let available=skillCharges>0&&['READY','WARNING'].includes(game)&&!paused;btn.disabled=!available;$('#skillInfo').textContent=skillCharges>0?(available?'残り '+skillCharges+'回':'落下終了後に使用可能'):'あと'+Math.max(0,5-(merges%5))+'合体で解放';$('#pauseButton').textContent=paused?'▶ 再開':'Ⅱ 一時停止';$('#pauseButton').disabled=game==='GAME_OVER';stormBanner()}
 function startGame(check=true,newMode=mode){
  if(check&&balls.length&&game!=='GAME_OVER'&&!confirm('現在のプレイを終了し、新しいゲームを始めますか？'))return;
  if(!MODES[newMode])newMode='normal';mode=newMode;dailyDate=mode==='daily'?JST():'';rngState=mode==='daily'?seedFor(dailyDate):0;
- balls=[];nextId=1;current=randLv();next=randLv();score=0;merges=0;usedSkill=false;skillCharges=0;skillUseCount=0;turnCount=0;playId++;
+ balls=[];stormReset();nextId=1;current=randLv();next=randLv();score=0;merges=0;usedSkill=false;skillCharges=0;skillUseCount=0;turnCount=0;playId++;
  combo=0;turnChain=0;turnAge=0;settleMs=0;warnMs=0;game='READY';paused=false;aimX=W/2;particles=[];
  ensureExtra();stats.plays++;stats.modeRecords[mode].plays++;if(mode==='daily'){const dr=stats.dailyRecords[dailyDate]||{best:0,plays:0,cleared:false};dr.plays++;stats.dailyRecords[dailyDate]=dr}
  if(mode==='normal'&&stats.plays>=10)award('plays10');everPlayed=true;closeModal();save();setStatus();updateUI();toast(MODES[mode]+'モード開始！',1000)
 }
 function makeBall(lv,x,y,vx=0,vy=0,chain=0){return{id:nextId++,lv,x,y,vx,vy,chain,age:0}}
-function drop(){if(paused||(game!=='READY'&&game!=='WARNING'))return;const r=radii[current-1];const x=clamp(aimX,r+2,W-r-2);const b=makeBall(current,x,7+r,0,0,0);balls.forEach(q=>q.chain=0);balls.push(b);lastDropId=b.id;turnCount++;current=next;next=randLv();combo=0;turnChain=0;turnAge=0;settleMs=0;game='DROPPING';tone(310,.055);setStatus();updateUI()}
+function drop(){if(paused||(game!=='READY'&&game!=='WARNING'))return;const r=radii[current-1];const x=clamp(aimX,r+2,W-r-2);const b=makeBall(current,x,7+r,0,0,0);balls.forEach(q=>q.chain=0);balls.push(b);lastDropId=b.id;turnCount++;if(storm.active>0){storm.dropId=b.id;storm.applied=0;storm.active--;}current=next;next=randLv();combo=0;turnChain=0;turnAge=0;settleMs=0;game='DROPPING';tone(310,.055);setStatus();updateUI()}
 function award(id){if(!badgeDefs.some(x=>x[0]===id))return;if(mode==='daily')return;if(!recordMedal(id))return;toast('メダル獲得：'+badgeDefs.find(x=>x[0]===id)[1],1800)}
 function addParticles(x,y,lv){for(let i=0;i<10;i++){const a=i*Math.PI*2/10;particles.push({x,y,vx:Math.cos(a)*(1.2+lv*.13),vy:Math.sin(a)*(1.2+lv*.13)-.5,life:28,color:colors[lv-1]})}if(particles.length>160)particles.splice(0,particles.length-160)}
 function merge(a,b){const lv=a.lv;const cx=clamp((a.x+b.x)/2,radii[Math.min(9,lv)]+2,W-radii[Math.min(9,lv)]-2);const cy=(a.y+b.y)/2;const vx=clamp((a.vx+b.vx)/2,-4,4);const vy=clamp((a.vy+b.vy)/2,-4,4);const chain=Math.max(a.chain||0,b.chain||0)+1;
@@ -265,7 +277,7 @@ function merge(a,b){const lv=a.lv;const cx=clamp((a.x+b.x)/2,radii[Math.min(9,lv
  }
 function physicsStep(){const dt=1/3;
  for(let sub=0;sub<3;sub++){
-   for(const b of balls){b.age++;b.vy=Math.min(11,b.vy+.336*dt);b.vx*=.9975;b.vy*=.9993;b.x+=b.vx*dt;b.y+=b.vy*dt;
+   for(const b of balls){b.age++;if(b.id===storm.dropId&&b.y<FLOOR-radii[b.lv-1]-4&&storm.applied<95){b.vx=clamp(b.vx+storm.dir*.042,-2.1,2.1);storm.applied++;}b.vy=Math.min(11,b.vy+.336*dt);b.vx*=.9975;b.vy*=.9993;b.x+=b.vx*dt;b.y+=b.vy*dt;
      const r=radii[b.lv-1];if(b.x-r<2){b.x=r+2;if(b.vx<0)b.vx=-b.vx*.08}else if(b.x+r>W-2){b.x=W-r-2;if(b.vx>0)b.vx=-b.vx*.08}
      if(b.y+r>FLOOR){b.y=FLOOR-r;if(b.vy>0)b.vy=Math.abs(b.vy)<.6?0:-b.vy*.06;b.vx*=.88;if(Math.abs(b.vx)<.055)b.vx=0}
    }
@@ -293,8 +305,8 @@ function physicsStep(){const dt=1/3;
  }
 }
 function topOverflow(){return balls.some(b=>b.y-radii[b.lv-1]<LINE-1)}
-function settleTurn(){const wasWarning=warnMs>0;game=wasWarning?'WARNING':'READY';turnAge=0;settleMs=0;if(!topOverflow()){warnMs=0;game='READY'}else if(!wasWarning){warnMs=0;game='WARNING'}if(mode==='normal')stats.bestScore=Math.max(stats.bestScore,score);else{ensureExtra();stats.modeRecords[mode].best=Math.max(stats.modeRecords[mode].best,score);dailyProgress()}save();setStatus();updateUI()}
-function finish(){game='GAME_OVER';stats.lastScore=score;if(mode==='normal')stats.bestScore=Math.max(stats.bestScore,score);else{ensureExtra();stats.modeRecords[mode].best=Math.max(stats.modeRecords[mode].best,score)}if(mode==='daily'){dailyProgress();const dr=stats.dailyRecords[dailyDate];if(score>=2000&&!dr.cleared){dr.cleared=true;stats.dailyAwards.push(dailyDate);stats.dailyMedals=stats.dailyAwards.length}}warnMs=3000;save();setStatus();updateUI();tone(220,.2);openResult()}
+function settleTurn(){const wasWarning=warnMs>0;game=wasWarning?'WARNING':'READY';turnAge=0;settleMs=0;if(!topOverflow()){warnMs=0;game='READY'}else if(!wasWarning){warnMs=0;game='WARNING'}if(storm.dropId){storm.dropId=0;storm.applied=0;if(storm.active===0){ensureExtra();stats.stormsSurvived++;if(stats.stormsSurvived===1)award('storm1');storm.nextAt=turnCount+stormNextInterval(storm.serial+1)}}stormUpdateReady();if(mode==='normal')stats.bestScore=Math.max(stats.bestScore,score);else{ensureExtra();stats.modeRecords[mode].best=Math.max(stats.modeRecords[mode].best,score);dailyProgress()}save();setStatus();updateUI()}
+function finish(){storm.dropId=0;game='GAME_OVER';stats.lastScore=score;if(mode==='normal')stats.bestScore=Math.max(stats.bestScore,score);else{ensureExtra();stats.modeRecords[mode].best=Math.max(stats.modeRecords[mode].best,score)}if(mode==='daily'){dailyProgress();const dr=stats.dailyRecords[dailyDate];if(score>=2000&&!dr.cleared){dr.cleared=true;stats.dailyAwards.push(dailyDate);stats.dailyMedals=stats.dailyAwards.length}}warnMs=3000;save();setStatus();updateUI();tone(220,.2);openResult()}
 function step(ms){if(paused||modalHold||game==='GAME_OVER')return;
  if(game==='DROPPING'){
    physicsStep();turnAge+=ms;
@@ -346,7 +358,7 @@ function draw(){ctx.clearRect(0,0,W,H);let bg=ctx.createLinearGradient(0,0,0,H);
  ctx.font='bold 11px system-ui,sans-serif';ctx.textAlign='left';ctx.fillStyle=game==='WARNING'?'#ad3934':'#a06d40';ctx.fillText(game==='WARNING'?'残り '+Math.max(0,(3-warnMs/1000)).toFixed(1)+' 秒':'上限ライン',9,LINE-9);
  ctx.fillStyle='#a0bcb1';ctx.fillRect(0,FLOOR,W,4);
  for(const b of balls){const r=radii[b.lv-1];orb(b.x,b.y,r,b.lv)}
- if((game==='READY'||game==='WARNING')&&!paused){const r=radii[current-1],ax=clamp(aimX,r+2,W-r-2);ctx.strokeStyle='#27887b77';ctx.setLineDash([4,6]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(ax,2*r+10);ctx.lineTo(ax,H-5);ctx.stroke();ctx.setLineDash([]);orb(ax,7+r,r,current,.85,true)}
+ if((game==='READY'||game==='WARNING')&&!paused){const r=radii[current-1],ax=clamp(aimX,r+2,W-r-2);ctx.strokeStyle='#27887b77';ctx.setLineDash([4,6]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(ax,2*r+10);if(storm.active>0){ctx.moveTo(ax,2*r+10);ctx.quadraticCurveTo(ax+storm.dir*9,H*.42,clamp(ax+storm.dir*26,r+2,W-r-2),H*.69);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#bd621b';ctx.font='bold 15px sans-serif';ctx.fillText(storm.dir===1?'→':'←',clamp(ax+storm.dir*13,12,W-12),H*.45)}else{ctx.lineTo(ax,H-5);ctx.stroke();ctx.setLineDash([])}orb(ax,7+r,r,current,.85,true)}
  for(const p of particles){ctx.globalAlpha=clamp(p.life/28,0,1);ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3.1,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
  if(paused||game==='GAME_OVER'){ctx.fillStyle='#143f4670';ctx.fillRect(0,0,W,H);ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='900 31px system-ui,sans-serif';ctx.fillText(paused?'一時停止中':'ゲーム終了',W/2,H/2)}
 }
@@ -384,7 +396,7 @@ $('#pauseButton').onclick=()=>{if(game==='GAME_OVER')return;if(!paused){pause();
 function showModeMenu(){ensureExtra();const today=JST(),dr=stats.dailyRecords[today]||{best:0,plays:0,cleared:false};openModal(`${avatar(imgY.src)}<h2 id="dialogTitle">ゲームモード選択</h2><section class="panel"><b>通常モード</b><p>これまでと同じ出現率。最高 ${fmt(stats.bestScore)}点</p><button class="btn block modePick" data-mode="normal">通常を始める</button></section><section class="panel"><b>日替わりチャレンジ ／ ${today}（日本時間）</b><p>固定シードで全員同じ出現順。2,000点到達で、その日1回だけメダル獲得。今日の最高 ${fmt(dr.best)}点。${dr.cleared?'本日は達成済み':''}</p><button class="btn block modePick" data-mode="daily">日替わりを始める</button></section><section class="panel"><b>上級モード</b><p>大きめのLV3が積もりやすい難しめのモード。LV3の出現率が30%、LV1が35%、LV2が35%。くろまい君は最大2回。得点は通常モードと別記録。最高 ${fmt(stats.modeRecords.advanced.best)}点</p><button class="btn block modePick" data-mode="advanced">上級を始める</button></section><div class="actions vertical"><button class="btn secondary" id="back">メニューに戻る</button></div>`);document.querySelectorAll('.modePick').forEach(b=>b.onclick=()=>startGame(true,b.dataset.mode));$('#back').onclick=openMenu}
 function showMedals(){ensureExtra();const achieved=badgeDefs.map(([id,title])=>`<div class="catalog-row"><div class="catalog-orb" style="background:${stats.achievements.includes(id)?'#f2ce66':'#e3e7e7'}">${stats.achievements.includes(id)?'★':'—'}</div><div><b>${title}</b><small>${stats.achievements.includes(id)?'通常モードで獲得済み':'未獲得'} ${stats.advancedAwards.includes(id)?'／ 上級獲得済み':''}</small></div></div>`).join('');openModal(`${avatar(imgY.src)}<h2 id="dialogTitle">メダル・称号</h2><p>通常メダル ${stats.medalAwards}個 ／ 日替わり ${stats.dailyMedals}個 ／ 上級 ${stats.advancedAwards.length}個</p><h3>称号</h3><p>${unlockedTitles().map(x=>'「'+x+'」').join(' ／ ')}</p><h3>メダルの条件</h3><div class="catalog">${achieved}</div><div class="actions vertical"><button class="btn" id="back">メニューに戻る</button></div>`);$('#back').onclick=openMenu}
 function menuReturn(){openMenu()}
-function showHelp(){openModal(`<h2 id="dialogTitle">遊び方・ルール</h2><div class="panel"><b>① 落とす</b><p>タップまたはドラッグして落下位置を決め、アイテムを落とします。PCでは左右キー＋スペースでも操作できます。</p><b>② 合体する</b><p>同じLVのアイテム2個が接触すると次のLVに進化します。1回の落下で合体を重ねるとコンボ倍率が上がります。</p><b>③ 高得点を狙う</b><p>LV10同士を合体させると2個が消えて高得点。上限ラインを安定状態で3秒超えると終了します。</p><b>④ くろまい君</b><p>合体を5回達成すると、通常・日替わり1回、上級は最大2回、「次のアイテム」をLV1～3から選択できます。現在のアイテムは変わりません。</p></div><p class="note">タイ米 → 黒麹などの進化はゲーム内の架空のルールであり、実際の製造工程とは異なります。</p><div class="actions vertical"><button class="btn" id="back">メニューに戻る</button></div>`);$('#back').onclick=menuReturn}
+function showHelp(){openModal(`<h2 id="dialogTitle">遊び方・ルール</h2><div class="panel"><b>① 落とす</b><p>タップまたはドラッグして落下位置を決め、アイテムを落とします。PCでは左右キー＋スペースでも操作できます。</p><b>② 合体する</b><p>同じLVのアイテム2個が接触すると次のLVに進化します。1回の落下で合体を重ねるとコンボ倍率が上がります。</p><b>③ 高得点を狙う</b><p>LV10同士を合体させると2個が消えて高得点。上限ラインを安定状態で3秒超えると終了します。</p><b>④ 台風イベント</b><p>一定回数落下させると、沖縄近海に台風が接近。予告の後、3回の落下だけ横風で玉が流れます。風向きと曲がる予測線を見て落下位置を調節しましょう。盤面にある玉は風で動きません。</p><b>⑤ くろまい君</b><p>合体を5回達成すると、通常・日替わり1回、上級は最大2回、「次のアイテム」をLV1～3から選択できます。現在のアイテムは変わりません。</p></div><p class="note">タイ米 → 黒麹などの進化はゲーム内の架空のルールであり、実際の製造工程とは異なります。</p><div class="actions vertical"><button class="btn" id="back">メニューに戻る</button></div>`);$('#back').onclick=menuReturn}
 function medalsTitle(){return unlockedTitles().filter(x=>['泡盛チャレンジャー','泡盛見習い','泡盛名人','古酒の達人','泡盛合体マスター'].includes(x)).slice(-1)[0]}
 function showProfile(){openModal(`${avatar(imgY.src)}<h2 id="dialogTitle">プレイヤーステータス</h2><label for="nickname">ニックネーム（16文字以内）</label><input type="text" id="nickname" maxlength="16" autocomplete="off" placeholder="ゲスト"><div class="profile-grid"><div><small>通算プレイ</small><strong>${fmt(stats.plays)}回</strong></div><div><small>自己最高得点</small><strong>${fmt(Math.max(stats.bestScore,score))}</strong></div><div><small>最大コンボ</small><strong>${fmt(stats.maxCombo)}</strong></div><div><small>最大連鎖</small><strong>${fmt(stats.maxChain)}段</strong></div><div><small>メダル累計</small><strong>${fmt(stats.medalAwards)}個</strong></div><div><small>図鑑発見</small><strong>${stats.discovered.length}/10</strong></div></div><p><strong>称号：</strong>${medalsTitle()}<br><strong>仕次ぎスペシャル：</strong>${fmt(stats.finalPairs)}回<br><strong>日替わり専用メダル：</strong>${fmt(stats.dailyMedals)}個 ／ <strong>上級メダル：</strong>${fmt(stats.advancedAwards.length)}個 ／ <strong>上級最高：</strong>${fmt(stats.modeRecords.advanced.best)}点</p><div class="actions vertical"><button class="btn" id="saveNickname">ニックネームを保存</button><button class="btn secondary" id="showAwards">メダルと称号を見る</button></div><section class="panel"><h3>プレイ記録のバックアップ・復元</h3><p>記録をJSONファイルに保存します。復元できるのは同じバージョン（v${APP_VERSION}）のファイルのみです。</p><div class="actions"><button class="btn" id="backupButton">↓ バックアップ</button><button class="btn" id="restoreButton">↑ 復元</button></div><input id="restoreFile" type="file" accept="application/json,.json"><div id="message" role="status"></div><p class="muted">復元すると端末内の記録が置き換わります。保存できない環境ではバックアップを保管してください。</p></section><div class="actions vertical"><button class="btn secondary" id="back">メニューに戻る</button></div>`);
  $('#nickname').value=stats.nickname;$('#saveNickname').onclick=()=>{stats.nickname=$('#nickname').value.trim().slice(0,16)||'ゲスト';save();updateUI();$('#message').textContent='ニックネームを保存しました。'};
@@ -403,7 +415,7 @@ function firstStart(){initSave();if(stats.plays===0&&balls.length===0){stats.pla
 renderEvolutionGuide();
 firstStart();
 // 開発版のテスト用に最小限の読み取り専用状態を公開（公開FIX版では除去予定）
-window.__awamoriMergeDev={getState:()=>({version:APP_VERSION,game,paused,score,merges,balls:balls.map(b=>({...b})),current,next,warnMs,usedSkill,stats:{...stats}}),dropAt:x=>{aimX=x;drop()},tick:n=>{for(let i=0;i<n;i++)step(DT);updateUI()},start:()=>startGame(false)};
+window.__awamoriMergeDev={getState:()=>({version:APP_VERSION,game,paused,score,merges,balls:balls.map(b=>({...b})),current,next,warnMs,usedSkill,storm:{...storm},stats:{...stats}}),dropAt:x=>{aimX=x;drop()},tick:n=>{for(let i=0;i<n;i++)step(DT);updateUI()},setStormAt:n=>{storm.nextAt=n;stormUpdateReady()},start:()=>startGame(false)};
 })();
 </script>
 </body></html>
